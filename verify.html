@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body { background-color: #f9fafb; }
+      .otp-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
+    </style>
+  </head>
+  <body class="flex items-center justify-center min-h-screen p-4 font-sans">
+    <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm">
+      <div class="text-center mb-6">
+        <h2 class="text-2xl font-extrabold text-gray-900">Verifikasi OTP</h2>
+        <p class="text-gray-500 text-sm mt-2">
+          Kami telah mengirimkan kode ke nomor <br>
+          <span class="font-semibold text-gray-800"><?= phone ?></span>
+        </p>
+      </div>
+
+      <? if (error) { ?>
+        <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-3 mb-5 text-sm rounded" role="alert">
+          <p><?= error ?></p>
+        </div>
+      <? } ?>
+
+      <form action="<?= ScriptApp.getService().getUrl() ?>" method="POST" id="verifyForm">
+        <!-- Hidden inputs for routing and state -->
+        <input type="hidden" name="action" value="verify_otp">
+        <input type="hidden" name="phone" value="<?= phone ?>">
+
+        <div class="mb-6">
+          <label class="block text-gray-700 text-xs font-bold uppercase tracking-wider mb-2 text-center">
+            Masukkan Kode OTP
+          </label>
+          <input type="number"
+                 name="otp"
+                 placeholder="······"
+                 inputmode="numeric"
+                 autocomplete="one-time-code"
+                 class="otp-input w-full px-4 py-4 border-2 border-gray-200 rounded-xl text-center text-3xl font-bold tracking-[0.5em] focus:outline-none transition-all"
+                 required>
+        </div>
+
+        <button type="submit"
+                class="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-lg shadow-emerald-200">
+          Verifikasi & Login
+        </button>
+      </form>
+
+      <div class="mt-8 text-center border-t pt-4">
+        <p class="text-xs text-gray-400 mb-2">Salah memasukkan nomor?</p>
+        <a href="<?= ScriptApp.getService().getUrl() ?>" class="text-blue-600 font-medium text-sm hover:underline">
+          Ganti Nomor HP
+        </a>
+      </div>
+    </div>
+
+    <!-- Script fungsional dipisah dari CDN Tailwind -->
+    <script>
+      document.getElementById('verifyForm').addEventListener('submit', function() {
+        const btn = this.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.innerHTML = `
+          <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Memproses...
+        `;
+        btn.classList.add('opacity-70', 'cursor-not-allowed');
+      });
+    </script>
+  </body>
+</html>
