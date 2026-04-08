@@ -1,4 +1,4 @@
-WhatsApp OTP Authentication - Google Apps Script
+# WhatsApp OTP Authentication - Google Apps Script
 
 Proyek ini adalah sistem autentikasi (Login) berbasis OTP (One-Time Password) WhatsApp. Dibangun menggunakan Google Apps Script (GAS) sebagai backend/serverless, antarmuka HTML dengan Tailwind CSS, dan diintegrasikan dengan API WhatsApp Gateway (GOWA / go-whatsapp-web-multidevice).
 ✨ Fitur Utama
