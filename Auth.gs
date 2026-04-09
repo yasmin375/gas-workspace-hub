@@ -1,37 +1,112 @@
 /**
  * @file Auth.gs
- * @description Modul integrasi Auth/OTP menggunakan API Gowa.
+ * @description Modul integrasi Auth/OTP menggunakan API Gowa dengan keamanan yang ditingkatkan.
+ * Menerapkan hashing, expiry, rate limiting, dan pembatasan percobaan.
  */
+
+// Konfigurasi rahasia untuk hashing OTP (Pepper)
+// JANGAN UBAH setelah sistem berjalan agar hash lama tidak tidak valid
+const OTP_SECRET_PEPPER = 'GowaS3cr3tP3pp3r2026!@#';
 
 /**
  * Konfigurasi API Key dan Endpoint Gowa.
- * // TODO: Sesuaikan API_KEY dan BASE_URL dengan kredensial dari layanan Gowa Anda.
  */
-const GOWA_CONFIG = {
-  API_KEY: PropertiesService.getScriptProperties().getProperty('GOWA_API_KEY'),
-  BASE_URL: 'https://wa.dimanaaja.biz.id', // Ganti dengan endpoint resmi Gowa
-  SENDER_ID: 'GOWA_AUTH'
-};
+function getGowaConfig() {
+  const props = PropertiesService.getScriptProperties();
+  const apiKey = props.getProperty('GOWA_API_KEY');
+  
+  if (!apiKey || !apiKey.includes(':')) {
+    console.warn("GOWA_API_KEY tidak ditemukan atau formatnya tidak valid (harus username:password)");
+  }
+
+  return {
+    API_KEY: apiKey || '',
+    BASE_URL: 'https://wa.dimanaaja.biz.id',
+    SENDER_ID: 'GOWA_AUTH'
+  };
+}
+
 /**
- * Mengirim OTP ke nomor HP melalui API Gowa menggunakan UrlFetchApp.
+ * Membuat hash SHA-256 dari string input
+ */
+function generateHash(input) {
+  const rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, input);
+  let txtHash = '';
+  for (let i = 0; i < rawHash.length; i++) {
+    let hashVal = rawHash[i];
+    if (hashVal < 0) {
+      hashVal += 256;
+    }
+    if (hashVal.toString(16).length == 1) {
+      txtHash += '0';
+    }
+    txtHash += hashVal.toString(16);
+  }
+  return txtHash;
+}
+
+/**
+ * Mengirim OTP ke nomor HP dengan implementasi Rate Limiting dan Hashing.
  * @param {string} phoneNumber - Format internasional (misal: 62812345678).
  * @returns {Object} {success: boolean, message: string}
  */
 function sendOtp(phoneNumber) {
-  // Menggunakan endpoint standar GOWA untuk kirim pesan
-  const url = `${GOWA_CONFIG.BASE_URL}/send/message`; 
-  
-  // Buat kode OTP acak 6 digit
+  const scriptProps = PropertiesService.getScriptProperties();
+  const propKey = `OTP_DATA_${phoneNumber}`;
+  const existingDataStr = scriptProps.getProperty(propKey);
+  const now = new Date().getTime();
+
+  let otpData = {
+    codeHash: '',
+    createdAt: now,
+    expiresAt: now + (5 * 60 * 1000), // Expired dalam 5 menit
+    attempts: 0,
+    lastSentAt: now,
+    sendCount: 1 // Hitung berapa kali OTP dikirim dalam sesi ini
+  };
+
+  // Implementasi Rate Limiting & Proteksi Resend
+  if (existingDataStr) {
+    const existingData = JSON.parse(existingDataStr);
+    
+    // Cek cooldown resend (minimal 60 detik)
+    if (now - existingData.lastSentAt < 60000) {
+      const waitTime = Math.ceil((60000 - (now - existingData.lastSentAt)) / 1000);
+      return { success: false, message: `Tunggu ${waitTime} detik lagi sebelum meminta OTP baru.` };
+    }
+
+    // Cek batas maksimum kirim (misal: 3 kali per 15 menit)
+    if (existingData.sendCount >= 3 && now < existingData.createdAt + (15 * 60 * 1000)) {
+      return { success: false, message: 'Batas permintaan OTP tercapai. Silakan coba lagi setelah 15 menit.' };
+    }
+
+    // Jika lebih dari 15 menit sejak OTP pertama, reset counter
+    if (now > existingData.createdAt + (15 * 60 * 1000)) {
+      otpData.sendCount = 1;
+    } else {
+      otpData.sendCount = existingData.sendCount + 1;
+      otpData.createdAt = existingData.createdAt; // Pertahankan waktu awal untuk window 15 menit
+    }
+  }
+
+  // Generate OTP dan Hash
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-  
-  // Format payload sesuai standar GOWA
+  otpData.codeHash = generateHash(phoneNumber + otpCode + OTP_SECRET_PEPPER);
+
+  // Kirim via API GOWA
+  const config = getGowaConfig();
+  const url = `${config.BASE_URL}/send/message`; 
   const payload = {
     phone: phoneNumber,
-    message: `Kode OTP Anda adalah: *${otpCode}*\n\nJangan berikan kode ini kepada siapapun.`
+    message: `Kode OTP Anda adalah: *${otpCode}*\n\nBerlaku selama 5 menit. Jangan berikan kode ini kepada siapapun.`
   };
 
   try {
-    const encodedAuth = Utilities.base64Encode(GOWA_CONFIG.API_KEY);
+    if (!config.API_KEY) {
+      throw new Error("GOWA_API_KEY belum dikonfigurasi dengan benar.");
+    }
+
+    const encodedAuth = Utilities.base64Encode(config.API_KEY);
 
     const response = UrlFetchApp.fetch(url, {
       method: 'post',
@@ -45,45 +120,62 @@ function sendOtp(phoneNumber) {
 
     const responseCode = response.getResponseCode();
 
-    // Mengembalikan logika pengecekan respons yang hilang
     if (responseCode === 200 || responseCode === 201) {
-      // SIMPAN OTP secara internal karena GOWA hanya bertindak sebagai pengirim pesan
-      const scriptProps = PropertiesService.getScriptProperties();
-      // Simpan dengan key unik per nomor, expired tidak bisa di set otomatis di property service
-      // tapi kita bisa simpan timestamp jika butuh validasi waktu. Untuk saat ini kita simpan valuenya.
-      scriptProps.setProperty(`OTP_${phoneNumber}`, otpCode);
-
-      return { success: true, message: 'OTP terkirim' };
+      // Simpan metadata OTP yang sudah di-hash (Bukan plain text)
+      scriptProps.setProperty(propKey, JSON.stringify(otpData));
+      return { success: true, message: 'OTP berhasil dikirim' };
     } else {
-      Logger.log(`Gowa Error [${responseCode}]: ${response.getContentText()}`);
-      return { success: false, message: 'Gagal kirim OTP' };
+      console.error(`Gowa API Error [${responseCode}]: ${response.getContentText()}`);
+      return { success: false, message: 'Gagal mengirim OTP dari server.' };
     }
   } catch (e) {
     console.error(`Error in sendOtp: ${e.message}`);
-    return { success: false, message: 'Terjadi kesalahan pada layanan pengiriman OTP.' };
+    return { success: false, message: 'Terjadi kesalahan sistem saat menghubungi layanan pengiriman.' };
   }
 }
 
 /**
- * Memverifikasi OTP secara internal (mencocokkan dengan yang disimpan di Script Properties).
+ * Memverifikasi OTP dengan mengecek umur, limit percobaan, dan mencocokkan hash.
  * @param {string} phoneNumber - Nomor HP user.
  * @param {string} otp - Kode OTP yang dimasukkan user.
  * @returns {Object} {success: boolean, message: string}
  */
 function verifyOtp(phoneNumber, otp) {
-  try {
-    const scriptProps = PropertiesService.getScriptProperties();
-    const savedOtp = scriptProps.getProperty(`OTP_${phoneNumber}`);
+  const scriptProps = PropertiesService.getScriptProperties();
+  const propKey = `OTP_DATA_${phoneNumber}`;
+  const dataStr = scriptProps.getProperty(propKey);
+  const now = new Date().getTime();
 
-    if (savedOtp && savedOtp === otp) {
-      // Hapus OTP setelah digunakan agar tidak bisa dipakai ulang
-      scriptProps.deleteProperty(`OTP_${phoneNumber}`);
-      return { success: true, message: 'Verifikasi berhasil' };
-    } else {
-      return { success: false, message: 'OTP tidak valid atau sudah kadaluwarsa.' };
-    }
-  } catch (e) {
-    console.error(`Error in verifyOtp: ${e.message}`);
-    return { success: false, message: 'Terjadi kesalahan pada proses verifikasi internal.' };
+  if (!dataStr) {
+    return { success: false, message: 'Sesi OTP tidak ditemukan atau sudah dibatalkan. Silakan minta ulang.' };
+  }
+
+  let otpData = JSON.parse(dataStr);
+
+  // 1. Cek Kedaluwarsa
+  if (now > otpData.expiresAt) {
+    scriptProps.deleteProperty(propKey);
+    return { success: false, message: 'Kode OTP sudah kadaluwarsa (lebih dari 5 menit).' };
+  }
+
+  // 2. Cek Batas Percobaan
+  if (otpData.attempts >= 5) {
+    scriptProps.deleteProperty(propKey);
+    return { success: false, message: 'Terlalu banyak percobaan salah. Sesi OTP dibatalkan demi keamanan.' };
+  }
+
+  // Update jumlah percobaan
+  otpData.attempts += 1;
+  scriptProps.setProperty(propKey, JSON.stringify(otpData));
+
+  // 3. Verifikasi Hash
+  const inputHash = generateHash(phoneNumber + otp + OTP_SECRET_PEPPER);
+  
+  if (inputHash === otpData.codeHash) {
+    // Sukses, bersihkan data OTP
+    scriptProps.deleteProperty(propKey);
+    return { success: true, message: 'Verifikasi berhasil' };
+  } else {
+    return { success: false, message: `Kode OTP salah. Sisa percobaan: ${5 - otpData.attempts}` };
   }
 }

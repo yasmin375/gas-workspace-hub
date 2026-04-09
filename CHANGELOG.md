@@ -1,7 +1,29 @@
 # **Changelog**
 
 ## **Unreleased**
+## **0.2.0**
 
+2026-04-08
+
+### **Changed**
+
+* Desain Penyimpanan OTP: Mengubah arsitektur penyimpanan OTP di Auth.gs dari plain-text string menjadi objek JSON terstruktur (menyimpan hash, waktu pembuatan, masa berlaku, dan jumlah percobaan).
+
+* Validasi Kredensial: Menambahkan pengecekan format username:password pada GOWA_API_KEY saat inisialisasi untuk mencegah kegagalan otentikasi semantik di runtime.
+
+* Normalisasi Input: Mengonsolidasikan normalisasi nomor telepon di awal doPost untuk memastikan konsistensi format 62xxxxxxxxxx sebagai key penyimpanan.
+
+* Penyempurnaan Dokumentasi: Meringkas isi file README.md secara signifikan (lebih dari 50%) untuk meningkatkan keterbacaan, efisiensi penyampaian informasi, dan kejelasan instruksi deployment tanpa menghilangkan detail esensial.
+
+**Security**
+
+* Hashing OTP: Mengimplementasikan algoritma SHA-256 dipadukan dengan rahasia sistem (pepper) dan nomor telepon untuk mengamankan OTP yang tersimpan di ScriptProperties. OTP asli tidak lagi terekspos.
+
+* Masa Berlaku Valid (Expiry): Menambahkan limitasi masa berlaku OTP secara ketat selama 5 menit.
+
+* Proteksi Rate Limiting & Cooldown: Mencegah eksploitasi fitur resend dengan memberlakukan jeda 60 detik antar pengiriman dan batas maksimal 3 kali pengiriman dalam rentang 15 menit.
+
+* Proteksi Brute-Force: Membatasi percobaan input kode verifikasi maksimal 5 kali sebelum sesi OTP dibatalkan secara otomatis.
 ## **0.1.0**
 
 \- 2026-04-08
