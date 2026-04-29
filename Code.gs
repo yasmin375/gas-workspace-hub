@@ -76,6 +76,7 @@ function doPost(e) {
       const token = e.parameter.token || '';
       if (token) {
         deleteSession(token);
+        logAuditEvent('LOGOUT', { detail: 'User logout via dashboard' });
       }
       return render('login', { phone: '', error: '', redirect: '' });
     }
@@ -93,6 +94,7 @@ function doPost(e) {
       const access = checkUserByEmail(googleResult.email);
 
       if (!access.found) {
+        logAuditEvent('LOGIN_FAILED', { email: googleResult.email, method: 'google', detail: 'Email tidak terdaftar' });
         return render('login', { phone: '', error: 'Email ' + googleResult.email + ' belum terdaftar. Hubungi admin untuk mendapatkan akses.', redirect: redirectParam });
       }
       if (!access.allowed) {
@@ -107,6 +109,8 @@ function doPost(e) {
         role: access.role,
         loginMethod: 'google'
       });
+
+      logAuditEvent('LOGIN_SUCCESS', { email: googleResult.email, method: 'google' });
 
       // Redirect ke dashboard (atau child app) dengan token
       return redirectAfterLogin(token, redirectParam);
@@ -127,6 +131,7 @@ function doPost(e) {
       const access = checkUserByPhone(cleanPhone);
 
       if (!access.found) {
+        logAuditEvent('LOGIN_FAILED', { phone: cleanPhone, method: 'whatsapp_otp', detail: 'Nomor tidak terdaftar' });
         return render('login', { phone: cleanPhone, error: 'Nomor ' + cleanPhone + ' belum terdaftar. Hubungi admin untuk mendapatkan akses.', redirect: redirectParam });
       }
       if (!access.allowed) {
@@ -168,9 +173,12 @@ function doPost(e) {
           loginMethod: 'whatsapp_otp'
         });
 
+        logAuditEvent('LOGIN_SUCCESS', { phone: cleanPhone, email: userData.found ? userData.email : '', method: 'whatsapp_otp' });
+
         // Redirect ke dashboard (atau child app) dengan token
         return redirectAfterLogin(token, redirectParam);
       } else {
+        logAuditEvent('LOGIN_FAILED', { phone: cleanPhone, method: 'whatsapp_otp', detail: 'OTP salah/kadaluwarsa' });
         return render('verify', { phone: cleanPhone, error: 'OTP Salah atau Kadaluwarsa.', redirect: redirectParam });
       }
     }
