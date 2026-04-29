@@ -5,6 +5,20 @@
  */
 
 /**
+ * Escape HTML special characters untuk mencegah HTML injection.
+ * @param {string} str - String yang akan di-escape.
+ * @returns {string} String yang sudah di-escape.
+ */
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
  * Merender halaman web app berdasarkan parameter query.
  * @param {Object} e - Event object dari Google Apps Script.
  * @returns {HtmlService.HtmlOutput}
@@ -25,8 +39,8 @@ function doGet(e) {
       return HtmlService.createHtmlOutput(
         '<div style="font-family:sans-serif;text-align:center;margin-top:50px;">' +
         '<h2>Anda sudah login</h2>' +
-        '<p>Selamat datang <b>' + name + '</b></p>' +
-        '<p style="color:#666;font-size:12px;">Login via: ' + method + ' | ' + identity + '</p>' +
+        '<p>Selamat datang <b>' + escapeHtml(name) + '</b></p>' +
+        '<p style="color:#666;font-size:12px;">Login via: ' + escapeHtml(method) + ' | ' + escapeHtml(identity) + '</p>' +
         '</div>'
       );
     } else {
@@ -85,8 +99,8 @@ function doPost(e) {
       return HtmlService.createHtmlOutput(
         '<div style="font-family:sans-serif;text-align:center;margin-top:50px;">' +
         '<h2>Login Berhasil!</h2>' +
-        '<p>Selamat datang <b>' + (access.name || googleResult.name) + '</b></p>' +
-        '<p style="color:#666;font-size:12px;">' + googleResult.email + '</p>' +
+        '<p>Selamat datang <b>' + escapeHtml(access.name || googleResult.name) + '</b></p>' +
+        '<p style="color:#666;font-size:12px;">' + escapeHtml(googleResult.email) + '</p>' +
         '</div>'
       );
     }
@@ -156,8 +170,8 @@ function doPost(e) {
         return HtmlService.createHtmlOutput(
           '<div style="font-family:sans-serif;text-align:center;margin-top:50px;">' +
           '<h2>Login Berhasil!</h2>' +
-          '<p>Selamat datang <b>' + (userData.found ? userData.name : cleanPhone) + '</b></p>' +
-          '<p style="color:#666;font-size:12px;">Login via WhatsApp OTP | ' + cleanPhone + '</p>' +
+          '<p>Selamat datang <b>' + escapeHtml(userData.found ? userData.name : cleanPhone) + '</b></p>' +
+          '<p style="color:#666;font-size:12px;">Login via WhatsApp OTP | ' + escapeHtml(cleanPhone) + '</p>' +
           '</div>'
         );
       } else {
