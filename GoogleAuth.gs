@@ -17,6 +17,15 @@ function getGoogleClientId() {
 }
 
 /**
+ * Mendapatkan Google Client ID tanpa throw error.
+ * Digunakan di template HTML agar halaman tetap render meski belum dikonfigurasi.
+ * @returns {string} Google OAuth Client ID atau string kosong
+ */
+function getGoogleClientIdSafe() {
+  return PropertiesService.getScriptProperties().getProperty('GOOGLE_CLIENT_ID') || '';
+}
+
+/**
  * Verifikasi Google ID Token menggunakan Google tokeninfo endpoint.
  * @param {string} idToken - JWT token dari Google Sign-In client-side.
  * @returns {Object} { success, email, name, picture, message }
