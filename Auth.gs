@@ -22,7 +22,7 @@ function getOtpPepper() {
 function getGowaConfig() {
   const props = PropertiesService.getScriptProperties();
   const apiKey = props.getProperty('GOWA_API_KEY');
-  
+
   if (!apiKey || !apiKey.includes(':')) {
     console.warn("GOWA_API_KEY tidak ditemukan atau formatnya tidak valid (harus username:password)");
   }
@@ -76,7 +76,7 @@ function sendOtp(phoneNumber) {
   // Implementasi Rate Limiting & Proteksi Resend
   if (existingDataStr) {
     const existingData = JSON.parse(existingDataStr);
-    
+
     // Cek cooldown resend (minimal 60 detik)
     if (now - existingData.lastSentAt < 60000) {
       const waitTime = Math.ceil((60000 - (now - existingData.lastSentAt)) / 1000);
@@ -103,7 +103,7 @@ function sendOtp(phoneNumber) {
 
   // Kirim via API GOWA
   const config = getGowaConfig();
-  const url = `${config.BASE_URL}/send/message`; 
+  const url = `${config.BASE_URL}/send/message`;
   const payload = {
     phone: phoneNumber,
     message: `Kode OTP Anda adalah: *${otpCode}*\n\nBerlaku selama 5 menit. Jangan berikan kode ini kepada siapapun.`
@@ -178,7 +178,7 @@ function verifyOtp(phoneNumber, otp) {
 
   // 3. Verifikasi Hash
   const inputHash = generateHash(phoneNumber + otp + getOtpPepper());
-  
+
   if (inputHash === otpData.codeHash) {
     // Sukses, bersihkan data OTP
     scriptProps.deleteProperty(propKey);

@@ -2,18 +2,25 @@
 
 ## **Unreleased**
 
-### **Fixed**
+### **Added**
 
-* Timezone diubah dari `America/New_York` ke `Asia/Makassar`.
-* Bug variabel `GOWA_CONFIG` di `TesKoneksi.gs` — variabel global tidak ada, diganti dengan pemanggilan `getGowaConfig()`.
-
-### **Security**
-
-* `OTP_SECRET_PEPPER` dipindahkan dari hardcode di `Auth.gs` ke ScriptProperties untuk keamanan kredensial.
+* **Login Google (GIS)**: Menambahkan opsi login menggunakan akun Google via Google Identity Services. File baru: `GoogleAuth.gs`.
+* **Whitelist User**: Menambahkan sistem whitelist user berbasis Google Sheet untuk kontrol akses. File baru: `UserWhitelist.gs`. Hanya email/nomor yang terdaftar dan berstatus `active` yang bisa login.
+* **Whitelist OTP WhatsApp**: Nomor telepon dicek terhadap whitelist sebelum OTP dikirim. Nomor yang tidak terdaftar akan ditolak.
+* **Dual Login UI**: Halaman login (`login.html`) kini menampilkan dua opsi: tombol "Sign in with Google" dan form OTP WhatsApp.
 
 ### **Changed**
 
-* Akses webapp diubah dari `MYSELF` ke `ANYONE` untuk production readiness.
+* **Session Data**: Struktur session diperluas untuk mendukung `email`, `name`, `role`, dan `loginMethod` selain `phone`.
+* **doPost() Guard**: Menambahkan null/empty guard pada parameter `phone` agar tidak crash saat login Google (yang tidak mengirim phone).
+* **Judul Webapp**: Diubah dari "Login OTP Gowa" menjadi "Auth Hub".
+
+### **Fixed**
+
+* **Timezone**: Diubah dari `America/New_York` ke `Asia/Makassar` (jika belum diterapkan dari Fase 1).
+* **OTP_SECRET_PEPPER**: Dipindahkan dari hardcode ke Script Properties (jika belum diterapkan dari Fase 1).
+* **Bug TesKoneksi.gs**: Variabel `GOWA_CONFIG` diganti dengan `getGowaConfig()` (jika belum diterapkan dari Fase 1).
+* **Akses Webapp**: Diubah dari `MYSELF` ke `ANYONE` (jika belum diterapkan dari Fase 1).
 
 ## **0.2.0**
 

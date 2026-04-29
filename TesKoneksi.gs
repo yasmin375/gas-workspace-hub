@@ -7,8 +7,8 @@ function testGowaConnection() {
   const config = getGowaConfig();
 
   // Menggunakan endpoint standar GOWA untuk cek koneksi/device
-  const url = config.BASE_URL + '/app/devices'; 
-  
+  const url = config.BASE_URL + '/app/devices';
+
   Logger.log('=== MEMULAI TEST KONEKSI KE GOWA ===');
   Logger.log('URL Target: ' + url);
   Logger.log('Kredensial (5 karakter pertama): ' + config.API_KEY.substring(0, 5) + '...');
@@ -18,13 +18,13 @@ function testGowaConnection() {
     const encodedAuth = Utilities.base64Encode(config.API_KEY);
 
     const response = UrlFetchApp.fetch(url, {
-      method: 'get', 
+      method: 'get',
       headers: {
         // Ganti Bearer menjadi Basic
         'Authorization': `Basic ${encodedAuth}`,
         'Content-Type': 'application/json'
       },
-      muteHttpExceptions: true 
+      muteHttpExceptions: true
     });
 
     const responseCode = response.getResponseCode();
@@ -48,6 +48,6 @@ function testGowaConnection() {
     Logger.log('🛑 KESIMPULAN: GAGAL TOTAL. Tidak bisa terhubung ke internet atau URL tidak valid.');
     Logger.log('Pesan Error Asli: ' + e.message);
   }
-  
+
   Logger.log('=== TEST SELESAI ===');
 }
