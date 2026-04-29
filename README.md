@@ -1,123 +1,127 @@
+# GAS Workspace Hub
 
-Sistem autentikasi OTP WhatsApp ini dibangun menggunakan **Google Apps Script (GAS)** (*backend serverless*), antarmuka **Tailwind CSS**, dan integrasi API **GOWA**.
+Sistem autentikasi terpusat (Single Sign-On) untuk aplikasi **Google Apps Script** webapp. Mendukung login via **akun Google** dan **OTP WhatsApp**, dengan manajemen session dan dashboard hub.
 
 ## **Fitur Utama**
 
-* **Pengiriman OTP WA**: Terintegrasi langsung dengan REST API GOWA.  
-* **Verifikasi Internal**: *Generate* dan validasi OTP menggunakan PropertiesService GAS (tanpa basis data eksternal).  
-* **Manajemen Sesi**: Sesi pengguna tersimpan selama 1 jam untuk mencegah login berulang.  
-* **Keamanan API**: Menggunakan *Basic Auth* (enkripsi *Base64*) untuk transmisi data.
-* **Hub Dashboard**: Dashboard terpusat setelah login, menampilkan daftar aplikasi yang bisa diakses.
-* **Session Terpusat**: Session disimpan di Google Sheet, memungkinkan single sign-on ke beberapa Apps Script webapp.
-* **App Registry**: Daftar aplikasi dikelola via Google Sheet, mudah ditambah/dihapus oleh admin.
+* **Dual Login**: Login via Google Sign-In (GIS) atau OTP WhatsApp (GOWA API).
+* **Whitelist User**: Hanya email/nomor terdaftar yang bisa login.
+* **Hub Dashboard**: Dashboard terpusat menampilkan daftar aplikasi yang bisa diakses.
+* **Session Terpusat**: Session disimpan di Google Sheet, memungkinkan SSO ke beberapa Apps Script webapp.
+* **App Registry**: Daftar aplikasi dikelola via Google Sheet.
+* **Audit Log**: Pencatatan aktivitas login/logout/akses.
+* **Auto Cleanup**: Scheduled trigger untuk membersihkan session expired dan log lama.
 
 ## **Struktur File**
 
 | File | Fungsi |
 | :---- | :---- |
-| Code.gs | *Controller* utama (rute doGet dan proses doPost). |
-| Auth.gs | Modul pembuatan, pengiriman, dan validasi OTP. |
-| TesKoneksi.gs | Skrip diagnostik pengujian server GOWA. |
-| GoogleAuth.gs | Verifikasi Google ID Token untuk login via Google. |
-| UserWhitelist.gs | Pengecekan whitelist user dari Google Sheet. |
+| Code.gs | Controller utama (routing doGet/doPost, redirect, session check). |
+| Auth.gs | Modul OTP: generate, hash (SHA-256 + pepper), kirim via GOWA API, verifikasi. |
+| GoogleAuth.gs | Verifikasi Google ID Token dari Google Identity Services. |
+| UserWhitelist.gs | Pengecekan whitelist user dari Google Sheet tab 'users'. |
 | Session.gs | Manajemen session terpusat (create, validate, delete, cleanup). |
-| AppRegistry.gs | Registry aplikasi hub, membaca dari Google Sheet tab 'apps'. |
-| dashboard.html | Halaman dashboard hub setelah login berhasil. |
-| AuditLog.gs | Pencatatan aktivitas login/logout/akses ke Google Sheet. |
+| AppRegistry.gs | Registry aplikasi hub dari Google Sheet tab 'apps'. |
+| AuditLog.gs | Pencatatan aktivitas ke Google Sheet tab 'audit_log'. |
 | Triggers.gs | Setup time-driven triggers untuk maintenance otomatis. |
-| lib/gas-auth-lib/ | Auth Library untuk child apps (deploy terpisah). |
-| \*.html | Antarmuka pengguna responsif (Login & Verifikasi). |
+| Setup.gs | Generator otomatis spreadsheet dan tabel. Jalankan sekali untuk setup awal. |
+| TesKoneksi.gs | Skrip diagnostik pengujian koneksi server GOWA. |
+| login.html | Halaman login (Google Sign-In + form OTP). |
+| verify.html | Halaman verifikasi kode OTP. |
+| dashboard.html | Halaman dashboard hub setelah login. |
 
-## **Panduan Instalasi & Deployment**
+## **Quick Start (Setup Awal)**
 
-Sinkronisasikan proyek lokal ke GAS menggunakan [Clasp](https://github.com/google/clasp):
+### 1. Clone & Push ke GAS
 
-git clone \<url-repositori\> && cd \<folder\>  
-clasp login  
-clasp create \--type webapp \--title "WhatsApp OTP"  
+```bash
+git clone https://github.com/tumts/gas-workspace-hub.git
+cd gas-workspace-hub
+clasp login
+clasp create --type webapp --title "GAS Workspace Hub"
 clasp push
+```
 
-**1\. Konfigurasi Kredensial**
+### 2. Set Script Properties Minimal
 
-Di Editor GAS, buka **Project Settings \> Script Properties**, lalu tambahkan:
+Buka **GAS Editor > Project Settings > Script Properties**, tambahkan:
 
-* **Property**: GOWA\_API\_KEY  
-* **Value**: username:password *(Kredensial peladen GOWA)*
+| Property | Value | Keterangan |
+| :---- | :---- | :---- |
+| `DEFAULT_ADMIN_EMAIL` | `admin@example.com` | Ganti dengan email admin Anda |
+| `DEFAULT_ADMIN_PHONE` | `6281234567890` | Ganti dengan nomor WA admin (format 62xxx) |
+| `GOWA_API_KEY` | `username:password` | Kredensial API GOWA |
+| `OTP_SECRET_PEPPER` | `(string rahasia)` | Pepper untuk hashing OTP |
 
-* **Property**: OTP\_SECRET\_PEPPER  
-* **Value**: GowaS3cr3tP3pp3r2026!@# *(atau value baru yang diinginkan sebagai pepper untuk hashing OTP)*
+### 3. Jalankan Setup Generator
 
-> **Penting:** Property `OTP_SECRET_PEPPER` **wajib** ditambahkan sebelum deploy ulang, agar fungsi OTP tidak rusak.
+Di GAS Editor, buka `Setup.gs` lalu jalankan:
 
-**Konfigurasi Tambahan (Fase 1.5)**
+```
+setupProductionSheet()
+```
 
-Di **Project Settings > Script Properties**, tambahkan juga:
+Fungsi ini akan **otomatis**:
+- Membuat Google Spreadsheet baru di Drive Anda
+- Membuat 4 tab: `users`, `sessions`, `apps`, `audit_log`
+- Mengisi header dan data admin default
+- Menyimpan Sheet ID ke Script Property `USERS_SHEET_ID`
 
-* **Property**: `GOOGLE_CLIENT_ID`
-  **Value**: OAuth Client ID dari Google Cloud Console (format: `xxxxx.apps.googleusercontent.com`)
+### 4. (Opsional) Setup Google Login
 
-* **Property**: `USERS_SHEET_ID`
-  **Value**: ID Google Sheet yang berisi whitelist user
+Jika ingin mengaktifkan tombol "Sign in with Google":
 
-* **Property**: `OTP_SECRET_PEPPER`
-  **Value**: Secret pepper untuk hashing OTP (contoh: `GowaS3cr3tP3pp3r2026!@#`)
-
-**Setup Google Cloud OAuth Client ID:**
 1. Buka [Google Cloud Console](https://console.cloud.google.com/)
-2. Pilih project yang terkait dengan Apps Script
+2. Pilih project yang terkait dengan Apps Script (lihat di GAS Editor > Project Settings > Google Cloud Platform Project)
 3. Buka **APIs & Services > Credentials**
 4. Klik **Create Credentials > OAuth Client ID**
 5. Application type: **Web application**
 6. Authorized JavaScript origins: `https://script.google.com`
-7. Salin Client ID ke Script Property `GOOGLE_CLIENT_ID`
+7. Salin Client ID → tambahkan Script Property `GOOGLE_CLIENT_ID`
 
-**Setup Google Sheet Whitelist User:**
-1. Buat Google Sheet baru
-2. Buat sheet dengan nama `users`
-3. Isi header baris pertama: `email | phone | nama | role | status | ditambahkan_oleh | tanggal`
-4. Contoh data: `andi@gmail.com | 6281234567890 | Andi | admin | active | owner | 2026-04-29`
-5. Salin Sheet ID (dari URL: `https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit`) ke Script Property `USERS_SHEET_ID`
+> Jika `GOOGLE_CLIENT_ID` tidak di-set, tombol Google otomatis disembunyikan. Hanya login OTP yang tersedia.
 
-**Tab `sessions` (otomatis dibuat):**
-Tab ini akan dibuat otomatis saat pertama kali ada user login. Tidak perlu setup manual.
+### 5. Verifikasi Setup
 
-**Tab `apps` (registry aplikasi):**
-1. Tab `apps` akan dibuat otomatis dengan contoh data saat pertama kali dashboard diakses
-2. Untuk menambah aplikasi, isi baris baru di tab `apps` dengan kolom:
-   - `id`: Identifier unik (misal: `inventaris`)
-   - `name`: Nama tampilan (misal: `Aplikasi Inventaris`)
-   - `url`: URL deployment webapp (misal: `https://script.google.com/macros/s/DEPLOY_ID/exec`)
-   - `icon`: Emoji icon (misal: `📦`)
-   - `description`: Deskripsi singkat
-   - `requiredRole`: `user` (semua user) atau `admin` (hanya admin)
-   - `status`: `active` atau `inactive`
+Jalankan di GAS Editor:
 
-**2\. Deployment (Web App)**
+```
+verifySetup()
+```
 
-Klik **Deploy \> New deployment \> Web app**. Atur hak akses:
+Cek Execution Log untuk memastikan semua property dan tab sudah benar.
 
-* Execute as: **Me**  
-* Who has access: **Anyone**
+### 6. Deploy
+
+Klik **Deploy > New deployment > Web app**:
+- Execute as: **Me**
+- Who has access: **Anyone** (termasuk tanpa akun Google)
+
+## **Setup Test (Opsional)**
+
+Untuk menjalankan automated test suite:
+
+```
+setupTestSheet()
+```
+
+Ini membuat spreadsheet terpisah dengan data dummy untuk testing.
 
 ## **Auth Library untuk Child Apps**
 
-Modul autentikasi untuk child apps tersedia di `lib/gas-auth-lib/`. Lihat `lib/gas-auth-lib/README.md` untuk panduan lengkap.
+Modul autentikasi untuk child apps tersedia di `lib/gas-auth-lib/`.
 
 **Quick Start:**
-1. Deploy `lib/gas-auth-lib/` sebagai GAS project terpisah (via `clasp create --type standalone`)
+1. Deploy `lib/gas-auth-lib/` sebagai GAS project terpisah
 2. Di child app, tambahkan library via Script ID
-3. Tambahkan Script Properties: `AUTH_SESSION_SHEET_ID` dan `AUTH_HUB_URL`
+3. Tambahkan Script Properties: `AUTH_SESSION_SHEET_ID` (sama dengan `USERS_SHEET_ID` hub) dan `AUTH_HUB_URL`
 4. Panggil `GasAuthLib.authenticate(e)` di `doGet()`
 
-## **Maintenance & Triggers**
+## **Maintenance**
 
 Jalankan `setupTriggers()` SATU KALI dari GAS editor untuk mengaktifkan:
-- **Session Cleanup**: Setiap 6 jam, hapus session expired dari Sheet
-- **Audit Log Cleanup**: Setiap 6 jam, hapus log lebih dari 90 hari
-
-## **Pengujian Koneksi API**
-
-Buka TesKoneksi.gs di editor GAS, jalankan fungsi testGowaConnection. Tinjau **Execution Log** untuk memastikan kemunculan Status HTTP 200 (Berhasil).
+- **Session Cleanup**: Setiap 6 jam, hapus session expired
+- **Audit Log Cleanup**: Setiap 6 jam, hapus log > 90 hari
 
 ## **Lisensi**
 
