@@ -4,26 +4,61 @@
     <base target="_top">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
       body { background-color: #f9fafb; }
     </style>
   </head>
   <body class="flex items-center justify-center min-h-screen p-4">
     <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border border-gray-100">
-      <div class="text-center mb-8">
-        <h2 class="text-2xl font-extrabold text-gray-900">Login OTP</h2>
-        <p class="text-gray-500 mt-2 text-sm">Masukkan nomor HP untuk melanjutkan</p>
+      <div class="text-center mb-6">
+        <h2 class="text-2xl font-extrabold text-gray-900">Login Hub</h2>
+        <p class="text-gray-500 mt-2 text-sm">Pilih metode login untuk melanjutkan</p>
       </div>
 
       <? if (error) { ?>
         <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-3 mb-6 text-sm flex items-center" role="alert">
-          <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
-          <?= error ?>
+          <svg class="h-4 w-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+          <span><?= error ?></span>
         </div>
       <? } ?>
 
+      <!-- Google Sign-In Button -->
+      <div id="googleBtnContainer" class="flex justify-center mb-4">
+        <div id="g_id_onload"
+             data-client_id="<?= getGoogleClientId() ?>"
+             data-callback="handleGoogleLogin"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-size="large"
+             data-theme="outline"
+             data-text="sign_in_with"
+             data-shape="rectangular"
+             data-logo_alignment="left"
+             data-width="320">
+        </div>
+      </div>
+
+      <!-- Google login loading state (hidden by default) -->
+      <div id="googleLoading" class="hidden text-center py-3 mb-4">
+        <svg class="animate-spin h-5 w-5 text-blue-600 inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="text-sm text-gray-600">Memverifikasi akun Google...</span>
+      </div>
+
+      <!-- Separator -->
+      <div class="flex items-center my-5">
+        <hr class="flex-grow border-gray-200">
+        <span class="px-3 text-xs text-gray-400 uppercase tracking-wider">atau</span>
+        <hr class="flex-grow border-gray-200">
+      </div>
+
+      <!-- WhatsApp OTP Form -->
       <form action="<?= ScriptApp.getService().getUrl() ?>" method="POST" id="loginForm">
         <input type="hidden" name="action" value="send_otp">
 
@@ -46,22 +81,50 @@
       </form>
 
       <div class="mt-8 text-center">
-        <p class="text-xs text-gray-400">© 2024 Secure Auth System</p>
+        <p class="text-xs text-gray-400">&copy; 2026 Auth Hub</p>
       </div>
     </div>
 
-    <!-- Script fungsional dipisah dari CDN Tailwind -->
     <script>
+      // Handle Google Sign-In callback
+      function handleGoogleLogin(response) {
+        // Show loading, hide Google button
+        document.getElementById('googleBtnContainer').classList.add('hidden');
+        document.getElementById('googleLoading').classList.remove('hidden');
+
+        // Create hidden form and submit ID token to doPost
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '<?= ScriptApp.getService().getUrl() ?>';
+
+        var actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'google_login';
+        form.appendChild(actionInput);
+
+        var tokenInput = document.createElement('input');
+        tokenInput.type = 'hidden';
+        tokenInput.name = 'id_token';
+        tokenInput.value = response.credential;
+        form.appendChild(tokenInput);
+
+        // Tambah dummy phone agar doPost tidak crash pada phone.replace()
+        var phoneInput = document.createElement('input');
+        phoneInput.type = 'hidden';
+        phoneInput.name = 'phone';
+        phoneInput.value = '';
+        form.appendChild(phoneInput);
+
+        document.body.appendChild(form);
+        form.submit();
+      }
+
+      // Handle OTP form submit loading state
       document.getElementById('loginForm').addEventListener('submit', function() {
-        const btn = this.querySelector('button[type="submit"]');
+        var btn = this.querySelector('button[type="submit"]');
         btn.disabled = true;
-        btn.innerHTML = `
-          <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          Memproses...
-        `;
+        btn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Memproses...';
         btn.classList.add('opacity-70', 'cursor-not-allowed');
       });
     </script>

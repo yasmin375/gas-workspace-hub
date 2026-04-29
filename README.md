@@ -15,6 +15,8 @@ Sistem autentikasi OTP WhatsApp ini dibangun menggunakan **Google Apps Script (G
 | Code.gs | *Controller* utama (rute doGet dan proses doPost). |
 | Auth.gs | Modul pembuatan, pengiriman, dan validasi OTP. |
 | TesKoneksi.gs | Skrip diagnostik pengujian server GOWA. |
+| GoogleAuth.gs | Verifikasi Google ID Token untuk login via Google. |
+| UserWhitelist.gs | Pengecekan whitelist user dari Google Sheet. |
 | \*.html | Antarmuka pengguna responsif (Login & Verifikasi). |
 
 ## **Panduan Instalasi & Deployment**
@@ -37,6 +39,35 @@ Di Editor GAS, buka **Project Settings \> Script Properties**, lalu tambahkan:
 * **Value**: GowaS3cr3tP3pp3r2026!@# *(atau value baru yang diinginkan sebagai pepper untuk hashing OTP)*
 
 > **Penting:** Property `OTP_SECRET_PEPPER` **wajib** ditambahkan sebelum deploy ulang, agar fungsi OTP tidak rusak.
+
+**Konfigurasi Tambahan (Fase 1.5)**
+
+Di **Project Settings > Script Properties**, tambahkan juga:
+
+* **Property**: `GOOGLE_CLIENT_ID`
+  **Value**: OAuth Client ID dari Google Cloud Console (format: `xxxxx.apps.googleusercontent.com`)
+
+* **Property**: `USERS_SHEET_ID`
+  **Value**: ID Google Sheet yang berisi whitelist user
+
+* **Property**: `OTP_SECRET_PEPPER`
+  **Value**: Secret pepper untuk hashing OTP (contoh: `GowaS3cr3tP3pp3r2026!@#`)
+
+**Setup Google Cloud OAuth Client ID:**
+1. Buka [Google Cloud Console](https://console.cloud.google.com/)
+2. Pilih project yang terkait dengan Apps Script
+3. Buka **APIs & Services > Credentials**
+4. Klik **Create Credentials > OAuth Client ID**
+5. Application type: **Web application**
+6. Authorized JavaScript origins: `https://script.google.com`
+7. Salin Client ID ke Script Property `GOOGLE_CLIENT_ID`
+
+**Setup Google Sheet Whitelist User:**
+1. Buat Google Sheet baru
+2. Buat sheet dengan nama `users`
+3. Isi header baris pertama: `email | phone | nama | role | status | ditambahkan_oleh | tanggal`
+4. Contoh data: `andi@gmail.com | 6281234567890 | Andi | admin | active | owner | 2026-04-29`
+5. Salin Sheet ID (dari URL: `https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit`) ke Script Property `USERS_SHEET_ID`
 
 **2\. Deployment (Web App)**
 
