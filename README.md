@@ -23,6 +23,9 @@ Sistem autentikasi OTP WhatsApp ini dibangun menggunakan **Google Apps Script (G
 | Session.gs | Manajemen session terpusat (create, validate, delete, cleanup). |
 | AppRegistry.gs | Registry aplikasi hub, membaca dari Google Sheet tab 'apps'. |
 | dashboard.html | Halaman dashboard hub setelah login berhasil. |
+| AuditLog.gs | Pencatatan aktivitas login/logout/akses ke Google Sheet. |
+| Triggers.gs | Setup time-driven triggers untuk maintenance otomatis. |
+| lib/gas-auth-lib/ | Auth Library untuk child apps (deploy terpisah). |
 | \*.html | Antarmuka pengguna responsif (Login & Verifikasi). |
 
 ## **Panduan Instalasi & Deployment**
@@ -95,6 +98,22 @@ Klik **Deploy \> New deployment \> Web app**. Atur hak akses:
 
 * Execute as: **Me**  
 * Who has access: **Anyone**
+
+## **Auth Library untuk Child Apps**
+
+Modul autentikasi untuk child apps tersedia di `lib/gas-auth-lib/`. Lihat `lib/gas-auth-lib/README.md` untuk panduan lengkap.
+
+**Quick Start:**
+1. Deploy `lib/gas-auth-lib/` sebagai GAS project terpisah (via `clasp create --type standalone`)
+2. Di child app, tambahkan library via Script ID
+3. Tambahkan Script Properties: `AUTH_SESSION_SHEET_ID` dan `AUTH_HUB_URL`
+4. Panggil `GasAuthLib.authenticate(e)` di `doGet()`
+
+## **Maintenance & Triggers**
+
+Jalankan `setupTriggers()` SATU KALI dari GAS editor untuk mengaktifkan:
+- **Session Cleanup**: Setiap 6 jam, hapus session expired dari Sheet
+- **Audit Log Cleanup**: Setiap 6 jam, hapus log lebih dari 90 hari
 
 ## **Pengujian Koneksi API**
 

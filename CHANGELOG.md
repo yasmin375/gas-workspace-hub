@@ -2,6 +2,18 @@
 
 ## **Unreleased**
 
+### **Added — Fase 4: Auth Library**
+
+* **Auth Library**: Modul reusable untuk child apps di `lib/gas-auth-lib/`. File: `AuthMiddleware.gs`. Child apps import library ini dan panggil `GasAuthLib.authenticate(e)` di `doGet()` untuk validasi session token.
+* **Child App Template**: Template contoh implementasi child app (`ChildAppTemplate.gs`).
+* **Role Check**: Fungsi `hasRole()` untuk cek role user di child app.
+
+### **Added — Fase 5: Hardening**
+
+* **Audit Log**: Pencatatan aktivitas login, logout, dan akses di Google Sheet tab `audit_log`. File baru: `AuditLog.gs`.
+* **Scheduled Cleanup**: Time-driven trigger untuk membersihkan session expired (setiap 6 jam) dan audit log lama (> 90 hari). File baru: `Triggers.gs`.
+* **Audit Log Cleanup**: Fungsi `cleanOldAuditLogs()` untuk membersihkan log lebih dari 90 hari.
+
 ### **Added — Fase 2: Centralized Session Store**
 
 * **Session Store (Google Sheet)**: Mengganti `UserProperties` dengan Google Sheet tab `sessions` sebagai penyimpanan session terpusat. File baru: `Session.gs`. Session kini bisa diakses oleh child apps melalui Sheet yang sama.
