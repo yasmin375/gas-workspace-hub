@@ -2,6 +2,18 @@
 
 ## **Unreleased**
 
+### **Added — Setup & Configuration**
+
+* **Setup Generator (`Setup.gs`)**: Script otomatis untuk membuat spreadsheet production dan test beserta semua tab yang dibutuhkan. Jalankan `setupProductionSheet()` sekali untuk setup awal — tidak perlu buat spreadsheet manual.
+* **Verify Setup**: Fungsi `verifySetup()` untuk mengecek kelengkapan konfigurasi.
+* **Default Admin via Property**: Admin awal dibaca dari Script Property `DEFAULT_ADMIN_EMAIL` dan `DEFAULT_ADMIN_PHONE` (placeholder, bisa diedit).
+
+### **Changed — Configuration**
+
+* **Timezone**: Diubah dari `Asia/Makassar` ke `Asia/Jakarta` (GMT+7).
+* **Webapp Access**: Diubah dari `ANYONE` ke `ANYONE_ANONYMOUS` agar user tanpa akun Google bisa mengakses halaman login (autentikasi ditangani oleh aplikasi sendiri via whitelist + OTP/Google Sign-In).
+* **Repo Rename**: Repository di-rename dari `test-gas` menjadi `gas-workspace-hub`.
+
 ### **Added — Fase 4: Auth Library**
 
 * **Auth Library**: Modul reusable untuk child apps di `lib/gas-auth-lib/`. File: `AuthMiddleware.gs`. Child apps import library ini dan panggil `GasAuthLib.authenticate(e)` di `doGet()` untuk validasi session token.
