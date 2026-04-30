@@ -21,7 +21,7 @@ function _authLib_escapeHtmlAttr(str) {
 
 function _authLib_hasRole(authResult, requiredRole) {
   if (!authResult || !authResult.authenticated) return false;
-  if (authResult.role === 'admin') return true;
+  if (authResult.role && authResult.role.trim().toLowerCase() === 'admin') return true;
   var userRoles = authResult.role.split(',').map(function(r) { return r.trim().toLowerCase(); });
   var requiredRoles = requiredRole.split(',').map(function(r) { return r.trim().toLowerCase(); });
   for (var i = 0; i < requiredRoles.length; i++) {
@@ -108,6 +108,13 @@ function testSuite_AuthLib() {
       assert.isTrue(_authLib_hasRole(auth, 'guru'), 'Admin should have guru access');
       assert.isTrue(_authLib_hasRole(auth, 'kepsek'), 'Admin should have kepsek access');
       assert.isTrue(_authLib_hasRole(auth, 'anything'), 'Admin should have any access');
+    });
+
+    it('should return true for admin case-insensitively', function() {
+      var authUpper = { authenticated: true, role: 'ADMIN' };
+      assert.isTrue(_authLib_hasRole(authUpper, 'guru'), 'ADMIN should have guru access');
+      var authMixed = { authenticated: true, role: 'Admin' };
+      assert.isTrue(_authLib_hasRole(authMixed, 'kepsek'), 'Admin should have kepsek access');
     });
 
     it('should return true for exact role match', function() {
