@@ -206,6 +206,7 @@ function runAllTests() {
   testSuite_AppRegistry();
   testSuite_AuditLog();
   testSuite_Code();
+  testSuite_AuthLib();
   
   // Print summary
   Logger.log('');

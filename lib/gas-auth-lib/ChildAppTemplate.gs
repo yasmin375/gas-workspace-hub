@@ -13,13 +13,7 @@ function doGet(e) {
   var auth = GasAuthLib.authenticate(e);
   
   if (!auth.authenticated) {
-    // Redirect ke hub login
-    return HtmlService.createHtmlOutput(
-      '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' +
-      '<p style="font-family:sans-serif;text-align:center;margin-top:50px;color:#666;">Mengalihkan ke halaman login...</p>' +
-      '<script>window.top.location.href="' + auth.redirectUrl + '";</script>' +
-      '</body></html>'
-    ).setTitle('Login Required');
+    return GasAuthLib.buildSafeRedirectPage(auth.redirectUrl);
   }
   
   // === USER TERAUTENTIKASI ===
@@ -27,10 +21,15 @@ function doGet(e) {
   
   // Contoh: cek role admin
   if (GasAuthLib.hasRole(auth, 'admin')) {
-    return HtmlService.createHtmlOutput('<h2>Admin Panel</h2><p>Halo ' + auth.name + '</p>');
+    return HtmlService.createHtmlOutput(
+      '<html><head><base target="_top"></head><body>' +
+      '<h2>Admin Panel</h2><p>Halo ' + auth.name + '</p>' +
+      '</body></html>'
+    );
   }
   
   return HtmlService.createHtmlOutput(
+    '<html><head><base target="_top"></head><body>' +
     '<div style="font-family:sans-serif;max-width:600px;margin:40px auto;padding:20px;">' +
     '<h2>Child App</h2>' +
     '<p>Selamat datang, <b>' + auth.name + '</b></p>' +
@@ -38,6 +37,6 @@ function doGet(e) {
     '<p>Role: ' + auth.role + '</p>' +
     '<hr>' +
     '<p><a href="' + GasAuthLib.getLogoutUrl(auth.token) + '">Logout</a></p>' +
-    '</div>'
+    '</div></body></html>'
   ).setTitle('Child App');
 }
