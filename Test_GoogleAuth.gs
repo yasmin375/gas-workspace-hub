@@ -48,6 +48,41 @@ function testSuite_GoogleAuth() {
     });
   });
 
+  describe('GoogleAuth — validateOAuthState()', function() {
+
+    it('should reject empty state', function() {
+      var result = validateOAuthState('');
+      assert.isFalse(result.valid, 'Empty state should be invalid');
+    });
+
+    it('should reject null state', function() {
+      var result = validateOAuthState(null);
+      assert.isFalse(result.valid, 'Null state should be invalid');
+    });
+
+    it('should reject malformed JSON state', function() {
+      var result = validateOAuthState('not-json');
+      assert.isFalse(result.valid, 'Malformed JSON should be invalid');
+    });
+
+    it('should reject state without nonce', function() {
+      var result = validateOAuthState(JSON.stringify({ redirect: 'https://example.com' }));
+      assert.isFalse(result.valid, 'State without nonce should be invalid');
+    });
+
+    it('should reject state with unknown nonce', function() {
+      var result = validateOAuthState(JSON.stringify({ nonce: 'fake-nonce-xyz', redirect: '' }));
+      assert.isFalse(result.valid, 'Unknown nonce should be invalid');
+    });
+
+    it('should return object with expected keys', function() {
+      var result = validateOAuthState('');
+      assert.isTrue('valid' in result, 'Should have valid key');
+      assert.isTrue('redirect' in result, 'Should have redirect key');
+      assert.isTrue('message' in result, 'Should have message key');
+    });
+  });
+
   describe('GoogleAuth — exchangeCodeForToken()', function() {
 
     it('should return failure for null code', function() {

@@ -33,15 +33,43 @@ function getGoogleClientIdSafe() {
  */
 function getGoogleAuthUrl(redirectUri, state) {
   var clientId = getGoogleClientId();
+  var nonce = Utilities.getUuid();
+  CacheService.getScriptCache().put('oauth_nonce_' + nonce, 'valid', 600);
+  var stateObj = JSON.stringify({ nonce: nonce, redirect: state || '' });
   var params = [
     'client_id=' + encodeURIComponent(clientId),
     'redirect_uri=' + encodeURIComponent(redirectUri),
     'response_type=code',
     'scope=' + encodeURIComponent('openid email profile'),
-    'state=' + encodeURIComponent(state || ''),
+    'state=' + encodeURIComponent(stateObj),
     'prompt=select_account'
   ];
   return 'https://accounts.google.com/o/oauth2/v2/auth?' + params.join('&');
+}
+
+/**
+ * Parse dan validasi state parameter dari OAuth callback.
+ * @param {string} stateParam - State parameter dari callback URL.
+ * @returns {Object} { valid, redirect, message }
+ */
+function validateOAuthState(stateParam) {
+  if (!stateParam) {
+    return { valid: false, redirect: '', message: 'State parameter tidak ditemukan.' };
+  }
+  try {
+    var stateObj = JSON.parse(stateParam);
+    if (!stateObj.nonce) {
+      return { valid: false, redirect: stateObj.redirect || '', message: 'CSRF nonce tidak ditemukan dalam state.' };
+    }
+    var cached = CacheService.getScriptCache().get('oauth_nonce_' + stateObj.nonce);
+    if (!cached) {
+      return { valid: false, redirect: stateObj.redirect || '', message: 'CSRF nonce tidak valid atau sudah kadaluwarsa.' };
+    }
+    CacheService.getScriptCache().remove('oauth_nonce_' + stateObj.nonce);
+    return { valid: true, redirect: stateObj.redirect || '' };
+  } catch (e) {
+    return { valid: false, redirect: stateParam || '', message: 'Gagal memparse state parameter.' };
+  }
 }
 
 /**

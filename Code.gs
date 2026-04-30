@@ -55,8 +55,14 @@ function doGet(e) {
   // Handle Google OAuth callback
   if (e.parameter.code) {
     var redirectUri = ScriptApp.getService().getUrl();
+    var stateResult = validateOAuthState(e.parameter.state || '');
+    var stateRedirect = stateResult.redirect;
+
+    if (!stateResult.valid) {
+      return render('login', { phone: '', error: stateResult.message, redirect: stateRedirect });
+    }
+
     var googleResult = exchangeCodeForToken(e.parameter.code, redirectUri);
-    var stateRedirect = e.parameter.state || '';
 
     if (!googleResult.success) {
       return render('login', { phone: '', error: googleResult.message, redirect: stateRedirect });
@@ -88,9 +94,7 @@ function doGet(e) {
   const phone = e.parameter.phone || '';
   const error = e.parameter.error || '';
 
-  var googleAuthUrl = '';
-  try { googleAuthUrl = getGoogleAuthUrl(ScriptApp.getService().getUrl(), redirectUrl); } catch(err) {}
-  return render(page, { phone: phone, error: error, redirect: redirectUrl, googleAuthUrl: googleAuthUrl });
+  return render(page, { phone: phone, error: error, redirect: redirectUrl });
 }
 
 /**
@@ -340,7 +344,6 @@ function render(filename, args = {}) {
     template.error = '';
     template.phone = '';
     template.redirect = '';
-    template.googleAuthUrl = '';
     template.sessionData = {};
     template.apps = [];
 
