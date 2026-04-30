@@ -21,11 +21,8 @@
  * function doGet(e) {
  *   var auth = GasAuthLib.authenticate(e);
  *   if (!auth.authenticated) {
- *     return HtmlService.createHtmlOutput(
- *       '<script>window.top.location.href="' + auth.redirectUrl + '";</script>'
- *     );
+ *     return GasAuthLib.buildSafeRedirectPage(auth.redirectUrl);
  *   }
- *   // User terautentikasi, lanjut render app
  *   return renderApp(auth);
  * }
  */
@@ -136,7 +133,13 @@ function _buildHubLoginUrl(e) {
 function hasRole(authResult, requiredRole) {
   if (!authResult || !authResult.authenticated) return false;
   if (authResult.role === 'admin') return true; // Admin bisa semua
-  return authResult.role === requiredRole;
+  // Support comma-separated roles (e.g., "guru,kepsek")
+  var userRoles = authResult.role.split(',').map(function(r) { return r.trim().toLowerCase(); });
+  var requiredRoles = requiredRole.split(',').map(function(r) { return r.trim().toLowerCase(); });
+  for (var i = 0; i < requiredRoles.length; i++) {
+    if (userRoles.indexOf(requiredRoles[i]) !== -1) return true;
+  }
+  return false;
 }
 
 /**
@@ -149,4 +152,45 @@ function getLogoutUrl(token) {
   if (!hubUrl) return '';
   // Logout dilakukan via POST di hub, tapi kita bisa redirect ke hub tanpa token
   return hubUrl;
+}
+
+/**
+ * Escape string untuk digunakan di HTML attribute (pencegahan XSS).
+ * @param {string} str - String yang akan di-escape
+ * @returns {string} String yang sudah di-escape
+ */
+function escapeHtmlAttr(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * Bangun halaman redirect yang aman menggunakan <a target="_top">.
+ * Menghindari window.top.location.href yang diblokir oleh iframe sandbox GAS.
+ * @param {string} url - URL tujuan redirect
+ * @returns {HtmlService.HtmlOutput}
+ */
+function buildSafeRedirectPage(url) {
+  var safeUrl = escapeHtmlAttr(url);
+  return HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+    '<base target="_top">' +
+    '<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;' +
+    'min-height:100vh;background:#f9fafb;margin:0;}' +
+    '.card{text-align:center;background:#fff;padding:2rem;border-radius:1rem;' +
+    'box-shadow:0 4px 24px rgba(0,0,0,0.08);max-width:360px;width:100%;}' +
+    '.btn{display:inline-block;background:#2563eb;color:#fff;font-weight:700;' +
+    'padding:0.875rem 2rem;border-radius:0.75rem;text-decoration:none;' +
+    'transition:background 0.2s;}' +
+    '.btn:hover{background:#1d4ed8;}</style>' +
+    '</head><body><div class="card">' +
+    '<p style="color:#666;font-size:0.875rem;margin:0 0 1.5rem;">Klik tombol di bawah untuk melanjutkan</p>' +
+    '<a href="' + safeUrl + '" class="btn" target="_top">Masuk ke Aplikasi &rarr;</a>' +
+    '</div></body></html>'
+  ).setTitle('Login Required');
 }
