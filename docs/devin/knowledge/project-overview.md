@@ -219,3 +219,15 @@ Semua data disimpan di **satu Google Spreadsheet** (ID di Script Property `USERS
 - Perubahan di `lib/gas-auth-lib/` (blast radius tinggi)
 - Perubahan yang menambah/mengubah usage Script Properties
 - PR tanpa test coverage (minimal ada test case baru di `Test_*.gs`)
+
+### Mekanisme Teknis
+
+Auto-merge diatur oleh `.github/workflows/auto-merge-devin.yml`:
+- Semua Devin PR otomatis di-approve
+- Auto-merge HANYA berjalan jika:
+  - Title PR tidak mengandung `[HIGH-RISK]`
+  - File yang diubah tidak termasuk area HIGH risk
+
+### Instruksi untuk Devin:
+- Jika task menyentuh file HIGH risk, tambahkan `[HIGH-RISK]` di awal title PR
+- Contoh: `[HIGH-RISK][fix] perbaiki rate limiting di Auth.gs`
