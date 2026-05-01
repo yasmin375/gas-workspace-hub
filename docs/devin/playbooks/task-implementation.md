@@ -53,6 +53,11 @@ Jika perubahan relevan untuk di-test:
 
 ### 7. Buat Draft PR
 
+**Jika perubahan menyentuh file HIGH risk** (lihat risk-register.md):
+- Tambahkan `[HIGH-RISK]` di awal title PR
+- Contoh: `[HIGH-RISK][feat] tambah CSRF token untuk Admin API`
+- Ini mencegah auto-merge dan memastikan user review manual
+
 Format PR description:
 
 ```markdown
